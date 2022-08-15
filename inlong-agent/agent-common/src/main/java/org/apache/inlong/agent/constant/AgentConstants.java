@@ -17,8 +17,6 @@
 
 package org.apache.inlong.agent.constant;
 
-import org.apache.inlong.agent.metrics.AgentMetricSingleton;
-import org.apache.inlong.agent.metrics.global.GlobalMetrics;
 import org.apache.inlong.agent.utils.AgentUtils;
 
 /**
@@ -169,6 +167,11 @@ public class AgentConstants {
     public static final int DEFAULT_JOB_NUMBER_LIMIT = 15;
 
     public static final String AGENT_LOCAL_IP = "agent.local.ip";
+    public static final String DEFAULT_LOCAL_IP = "127.0.0.1";
+
+    public static final String AGENT_CLUSTER_NAME = "agent.cluster.name";
+    public static final String AGENT_CLUSTER_TAG = "agent.cluster.tag";
+    public static final String AGENT_CLUSTER_IN_CHARGES = "agent.cluster.inCharges";
 
     public static final String AGENT_LOCAL_UUID = "agent.local.uuid";
 
@@ -196,6 +199,4 @@ public class AgentConstants {
     public static final String AGENT_METRIC_LISTENER_CLASS = "agent.domainListeners";
     public static final String AGENT_METRIC_LISTENER_CLASS_DEFAULT =
             "org.apache.inlong.agent.metrics.AgentPrometheusMetricListener";
-
-    public static final GlobalMetrics GLOBAL_METRICS = AgentMetricSingleton.getAgentMetricHandler().globalMetrics;
 }

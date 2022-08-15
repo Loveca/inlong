@@ -33,6 +33,11 @@ agent.http.enable=true
 agent.domainListeners=org.apache.inlong.agent.metrics.AgentPrometheusMetricListener
 agent.prometheus.exporter.port=9080
 audit.proxys=$AUDIT_PROXY_URL
+agent.cluster.tag=$CLUSTER_TAG
+agent.cluster.name=$CLUSTER_NAME
+agent.cluster.inCharges=$CLUSTER_IN_CHARGES
+agent.manager.auth.secretId=$MANAGER_OPENAPI_AUTH_ID
+agent.manager.auth.secretKey=$MANAGER_OPENAPI_AUTH_KEY
 EOF
 # start
 bash +x ${file_path}/bin/agent.sh start

@@ -18,10 +18,12 @@
 package org.apache.inlong.agent.plugin.sources;
 
 import org.apache.inlong.agent.conf.JobProfile;
+import org.apache.inlong.agent.constant.DataCollectType;
+import org.apache.inlong.agent.constant.FileCollectType;
 import org.apache.inlong.agent.plugin.AgentBaseTestsHelper;
 import org.apache.inlong.agent.plugin.Message;
 import org.apache.inlong.agent.plugin.Reader;
-import org.apache.inlong.agent.plugin.sources.reader.TextFileReader;
+import org.apache.inlong.agent.plugin.sources.reader.file.FileReaderOperator;
 import org.apache.inlong.agent.utils.AgentUtils;
 import org.apache.inlong.common.metric.MetricRegister;
 import org.junit.AfterClass;
@@ -50,6 +52,9 @@ import java.util.stream.Stream;
 import static org.apache.inlong.agent.constant.CommonConstants.PROXY_INLONG_GROUP_ID;
 import static org.apache.inlong.agent.constant.CommonConstants.PROXY_INLONG_STREAM_ID;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_DIR_FILTER_PATTERN;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_COLLECT_TYPE;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_CONTENT_COLLECT_TYPE;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_LINE_END_PATTERN;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_MAX_WAIT;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_INSTANCE_ID;
 
@@ -101,13 +106,13 @@ public class TestTextFileReader {
         JobProfile jobConfiguration = JobProfile.parseJsonStr("{}");
         String mainPath = Paths.get(uri).toString();
         jobConfiguration.set(JOB_DIR_FILTER_PATTERN, Paths.get(mainPath,
-                "[1-2].txt").toFile().getAbsolutePath());
+                "[2].txt").toFile().getAbsolutePath());
         jobConfiguration.set(JOB_INSTANCE_ID, "test");
         jobConfiguration.set(PROXY_INLONG_GROUP_ID, "groupid");
         jobConfiguration.set(PROXY_INLONG_STREAM_ID, "streamid");
         TextFileSource fileSource = new TextFileSource();
         List<Reader> readerList = fileSource.split(jobConfiguration);
-        Assert.assertEquals(2, readerList.size());
+        Assert.assertEquals(1, readerList.size());
         Reader reader = readerList.get(0);
         reader.init(jobConfiguration);
         while (!reader.isFinished()) {
@@ -115,9 +120,72 @@ public class TestTextFileReader {
             if (message == null) {
                 break;
             }
-            Assert.assertTrue("hello".equals(message.toString())
-                    || "world".equals(message.toString()));
+            Assert.assertTrue(message.toString().contains("hello")
+                    || message.toString().contains("world"));
             LOGGER.info("message is {}", message.toString());
+        }
+    }
+
+    /**
+     * Custom line end character.
+     */
+    @Test
+    public void testLineEnd() throws Exception {
+        URI uri = getClass().getClassLoader().getResource("test").toURI();
+        JobProfile jobConfiguration = JobProfile.parseJsonStr("{}");
+        String mainPath = Paths.get(uri).toString();
+        jobConfiguration.set(JOB_DIR_FILTER_PATTERN, Paths.get(mainPath,
+                "[1].txt").toFile().getAbsolutePath());
+        jobConfiguration.set(JOB_INSTANCE_ID, "test");
+        jobConfiguration.set(PROXY_INLONG_GROUP_ID, "groupid");
+        jobConfiguration.set(PROXY_INLONG_STREAM_ID, "streamid");
+        jobConfiguration.set(JOB_FILE_COLLECT_TYPE, FileCollectType.FULL);
+        jobConfiguration.set(JOB_FILE_LINE_END_PATTERN, "line-end-symbol");
+        TextFileSource fileSource = new TextFileSource();
+        List<Reader> readerList = fileSource.split(jobConfiguration);
+        Assert.assertEquals(1, readerList.size());
+        Reader reader = readerList.get(0);
+        reader.init(jobConfiguration);
+        while (!reader.isFinished()) {
+            Message message = reader.read();
+            if (message == null) {
+                break;
+            }
+            Assert.assertTrue(
+                    message.toString().equalsIgnoreCase("hello") || message.toString().equalsIgnoreCase("aa world")
+                            || message.toString().equalsIgnoreCase("agent"));
+            LOGGER.info("message is {}", message.toString());
+        }
+    }
+
+    /**
+     * increment of file data
+     */
+    @Test
+    public void testIncrementData() throws Exception {
+        URI uri = getClass().getClassLoader().getResource("test").toURI();
+        JobProfile jobConfiguration = JobProfile.parseJsonStr("{}");
+        String mainPath = Paths.get(uri).toString();
+        jobConfiguration.set(JOB_DIR_FILTER_PATTERN, Paths.get(mainPath,
+                "[1].txt").toFile().getAbsolutePath());
+        jobConfiguration.set(JOB_INSTANCE_ID, "test");
+        jobConfiguration.set(PROXY_INLONG_GROUP_ID, "groupid");
+        jobConfiguration.set(PROXY_INLONG_STREAM_ID, "streamid");
+        jobConfiguration.set(JOB_FILE_COLLECT_TYPE, FileCollectType.FULL);
+        jobConfiguration.set(JOB_FILE_CONTENT_COLLECT_TYPE, DataCollectType.INCREMENT);
+        TextFileSource fileSource = new TextFileSource();
+        List<Reader> readerList = fileSource.split(jobConfiguration);
+        Assert.assertEquals(1, readerList.size());
+        Reader reader = readerList.get(0);
+        reader.init(jobConfiguration);
+
+        while (!reader.isFinished()) {
+            Message message = reader.read();
+            if (null != message) {
+                LOGGER.info("message is {}", message.toString());
+            }
+            Assert.assertNull(message);
+            break;
         }
     }
 
@@ -135,13 +203,13 @@ public class TestTextFileReader {
             afterList.add("world");
         }
         Files.write(localPath, afterList, StandardOpenOption.APPEND);
-        TextFileReader reader = new TextFileReader(localPath.toFile(), 1000);
+        FileReaderOperator fileReaderOperator = new FileReaderOperator(localPath.toFile(), 1000);
         JobProfile jobProfile = new JobProfile();
         jobProfile.set(PROXY_INLONG_GROUP_ID, "groupid");
         jobProfile.set(PROXY_INLONG_STREAM_ID, "streamid");
-        reader.init(jobProfile);
+        fileReaderOperator.init(jobProfile);
 
-        Assert.assertEquals("world", new String(reader.read().getBody()));
+        Assert.assertEquals("world", new String(fileReaderOperator.read().getBody()));
 
     }
 
@@ -152,7 +220,7 @@ public class TestTextFileReader {
         jobProfile.set(PROXY_INLONG_GROUP_ID, "groupid");
         jobProfile.set(PROXY_INLONG_STREAM_ID, "streamid");
         Path localPath = Paths.get(testDir.toString(), "test1.txt");
-        TextFileReader reader = new TextFileReader(localPath.toFile(), 0);
+        FileReaderOperator reader = new FileReaderOperator(localPath.toFile(), 0);
         if (localPath.toFile().exists()) {
             localPath.toFile().delete();
         }
